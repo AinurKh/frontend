@@ -4,10 +4,19 @@
     <script src=https://code.jquery.com/jquery-3.6.0.min.js></script>
     <link href="/css/my.css" rel="stylesheet">
 </head>
-<body onload="getList()">
+<body onload="getList(0)"><!-- При загрузке страницы onload должен выдать список -->
 <h1>My beautiful wife</h1>
 
-<table id="Table" border="1">
+<!-- Сколько выдать на странице аккаунтов 3,5,10,15 (перед таблицей)-->
+<label for="count_1">Count per :</label>
+<select id="count_1"onchange="getList(0)">
+    <option value="3">3</option>
+    <option value="5">5</option>
+    <option value="10">10</option>
+    <option value="15">15</option>
+</select>
+<!-- Создание таблицы -->
+<table id="Table">
     <tr>
         <th>#</th>
         <th>Name</th>
@@ -17,17 +26,41 @@
         <th>Level</th>
         <th>Birthday</th>
         <th>Banned</th>
+        <th id="Edit">Edit</th>
+        <th id="Delete">Delete</th>
 
     </tr>
 </table>
-
-<div>
-
-</div>
+<!-- Надпись Pages под таблицей-->
+<div id="pageButtons">Pages:</div>
 
 <script>
-    function getList(){
-        let url = "/rest/players";
+    <!-- Функция получения списка-->
+    function getList(page_Number){
+        <!-- url-то где хранятся пользв -->
+        let url = "/rest/players?";
+
+        <!-- Чтобы не циклились аккаунты при смене страницы или колва-->
+        $("tr:has(td)").remove();
+
+        <!-- Кол-во пользователей на странице-->
+        let countPerPages = $("#count_1").val();
+
+        <!-- ПРоверка на нулл-->
+        if (countPerPages==null){
+            countPerPages=3;
+        }
+
+        <!-- Параметры для url после "?"-->
+        url=url.concat("pageSize=").concat(countPerPages);
+
+        if (page_Number==null){
+            page_Number=0;
+        }
+
+        <!-- Параметры для url после "?"-->
+        url=url.concat("& page_Number=").concat(page_Number);
+
         $.get(url,function (response){
             $.each(response,function (i,item){
                $('<tr>').html("<td>"
@@ -38,11 +71,48 @@
                    +item.profession + "</td><td>"
                    +item.level + "</td><td>"
                    + new Date(item.birthday).toLocaleDateString() + "</td><td>"
-                   +item.banned + "</td><td>"
+                   +item.banned + "</td>"
                ).appendTo("#Table")
             });
         });
+
+        <!-- общее количество пользоватей -->
+        let totalCount = getCount();
+
+        <!-- Определение количества страниц пользователей-->
+        <!-- Math.ceil это округление в большую сторону-->
+        let pageCount = Math.ceil(totalCount/countPerPages);
+
+        <!-- Чтобы номера страниц не повторялись-->
+        <!-- До этого было 1,2,1,2,1,2-->
+        $("button.pgn-bnt-styled").remove();
+
+        <!-- создание кнопок номера страницы-->
+        for (let i=0;i<pageCount;i++){
+            let button = "<button>"+(i+1)+ "</button>";
+            let btn=$(button)
+                .attr('id',"pageButtons"+i)
+                .attr('onclick',"getList("+ i +")")
+                .addClass('pgn-bnt-styled')
+            $('#pageButtons').append(btn);
+        }
     }
+
+    function getCount(){
+        <!-- url-то где хранятся пользв -->
+        let url = "/rest/players/count";
+        let res =0;
+        $.ajax({
+            url:url,
+            async : false, <!-- async чтобы дождаться выполнения этой функции, иначе выдает 0 -->
+            success: function (result){
+                res = parseInt(result)
+            }
+        })
+
+        return res;
+    }
+
 </script>
 </body>
 </html>
