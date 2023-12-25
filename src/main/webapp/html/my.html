@@ -13,7 +13,7 @@
     <option value="3">3</option>
     <option value="5">5</option>
     <option value="10">10</option>
-    <option value="15">15</option>
+    <option value="20">20</option>
 </select>
 <!-- Создание таблицы -->
 <table id="Table">
@@ -26,8 +26,8 @@
         <th>Level</th>
         <th>Birthday</th>
         <th>Banned</th>
-        <th id="Edit">Edit</th>
-        <th id="Delete">Delete</th>
+        <th>Edit</th>
+        <th>Delete</th>
 
     </tr>
 </table>
@@ -35,13 +35,13 @@
 <div id="pageButtons">Pages:</div>
 
 <script>
-    <!-- Функция получения списка-->
-    function getList(page_Number){
-        <!-- url-то где хранятся пользв -->
-        let url = "/rest/players?";
-
+    <!--Функция получения списка-->
+    function getList(pageNumber){
         <!-- Чтобы не циклились аккаунты при смене страницы или колва-->
         $("tr:has(td)").remove();
+
+        <!-- url-то где хранятся пользв -->
+        let url = "/rest/players?";
 
         <!-- Кол-во пользователей на странице-->
         let countPerPages = $("#count_1").val();
@@ -54,13 +54,14 @@
         <!-- Параметры для url после "?"-->
         url=url.concat("pageSize=").concat(countPerPages);
 
-        if (page_Number==null){
-            page_Number=0;
+        if (pageNumber==null){
+            pageNumber=0;
         }
 
         <!-- Параметры для url после "?"-->
-        url=url.concat("& page_Number=").concat(page_Number);
+        url=url.concat("&pageNumber=").concat(pageNumber);
 
+        <!-- Вывод содержимого таблицы -->
         $.get(url,function (response){
             $.each(response,function (i,item){
                $('<tr>').html("<td>"
@@ -71,7 +72,13 @@
                    +item.profession + "</td><td>"
                    +item.level + "</td><td>"
                    + new Date(item.birthday).toLocaleDateString() + "</td><td>"
-                   +item.banned + "</td>"
+                   +item.banned + "</td><td>"
+                   +"<button id='buttonEdit"+item.id+"' onclick='editAcc("+item.id+")'>"
+                   + "<img src='/img/edit.png'>"
+                   +"</button>" + "</td><td>"
+                   +"<button id='buttonDelete"+item.id +"'onclick='deleteAcc("+ item.id +")'>"
+                   + "<img src='/img/delete.png'>"
+                   +"</button>"
                ).appendTo("#Table")
             });
         });
@@ -96,22 +103,95 @@
                 .addClass('pgn-bnt-styled')
             $('#pageButtons').append(btn);
         }
+
+        let identifier="#pageButtons"+ pageNumber;
+        $(identifier).css('color',"red")
     }
 
-    function getCount(){
+    function getCount() {
         <!-- url-то где хранятся пользв -->
         let url = "/rest/players/count";
-        let res =0;
+        let res = 0;
         $.ajax({
-            url:url,
-            async : false, <!-- async чтобы дождаться выполнения этой функции, иначе выдает 0 -->
-            success: function (result){
+            url: url,
+            async: false, <!-- async чтобы дождаться выполнения этой функции, иначе выдает 0 -->
+            success: function (result) {
                 res = parseInt(result)
             }
         })
-
         return res;
     }
+
+    <!-- Удалить определенный аккаунт-->
+        function deleteAcc(id){
+            let url = "/rest/players/" + id;
+            $.ajax({
+               url : url,
+                type: 'DELETE',
+                success: function (){
+                    <!-- чтобы остаться на той же странице-->
+                   getList(getCurrentPage());
+                }
+            });
+        }
+
+    <!-- Изменить определенный аккаунт-->
+        function editAcc(id){
+        let identifier_edit = "#buttonEdit" + id;
+        let identifier_delete = "#buttonDelete" + id;
+        $(identifier_delete).remove();
+            <!-- Вместо карандаша появится картинка дискеты-->
+        let save_image_tag ="<img src ='/img/save.png'>";
+        $(identifier_edit).html(save_image_tag);
+
+            <!--Доступ к элементам в строке таблицы-->
+            let current_tr_element = $(identifier_edit).parent().parent();
+            let children = current_tr_element.children();
+
+            <!--Изменение строки name-->
+            let td_name = children[1];
+            td_name.innerHTML ="<input id ='input_name_"+id+"'type='text' value = '" + td_name.innerHTML+ "'>";
+
+            <!--Изменение строки title-->
+            let td_title = children[2];
+            td_title.innerHTML ="<input id ='input_title_"+id+"'type='text' value = '" + td_title.innerHTML+ "'>";
+
+            <!--Изменение строки race-->
+            let td_race = children[3];
+            let race_id="#select_race_" + id;
+            let race_current_value=td_race.innerHTML;
+            console.log("race_current_value"+race_current_value)
+            td_race.innerHTML=getDropdownRaceHtml(id);
+            $(race_id).val(race_current_value).change();
+        }
+
+    <!--Выдать список для выбора изменения расы из доступных-->
+        function getDropdownRaceHtml(id){
+        let race_id ="select_race_" + id;
+        return "<label for='race'></label>"
+            + "<select id="+ race_id +"name='race'>"
+            +  "<option value='HUMAN'>HUMAN</option>"
+            +  "<option value='DWARF'>DWARF</option>"
+            +  "<option value='ELF'>ELF</option>"
+            +  "<option value='GIANT'>GIANT</option>"
+            +  "<option value='ORC'>ORC</option>"
+            +  "<option value='TROLL'>TROLL</option>"
+            +  "<option value='HOBBIT'>HOBBIT</option>"
+            "</select>"
+        }
+
+
+    <!--Проверка на той же мы странице или нет через красную кнопку-->
+    <!--Страница на которой мы, горит зеленым-->
+        function getCurrentPage(){
+            let current_Page =1;
+            $('button:parent(div)').each(function (){
+                if ($(this).css('color')==='rgb(255,0,0)'){
+                    current_Page=$(this).text();
+                }
+            });
+            return parseInt(current_Page)-1;
+        }
 
 </script>
 </body>
